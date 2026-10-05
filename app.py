@@ -117,14 +117,51 @@ st.markdown(f"""
     color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
 }}
 
-/* ── Dropdown desplegable ── */
-[data-baseweb="popover"] [role="listbox"] {{ background: #FFFFFF !important; }}
-[data-baseweb="popover"] [role="option"] {{
-    color: {NAVY} !important; background: #FFFFFF !important;
+/* ── Popup de multiselect / selectbox (se renderiza fuera del sidebar) ── */
+ul[data-baseweb="menu"],
+div[data-baseweb="popover"] ul,
+div[data-baseweb="popover"] [role="listbox"] {{
+    background: #FFFFFF !important;
+    border: 1px solid rgba(0,0,0,.08) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,.18) !important;
+    padding: 4px !important;
 }}
-[data-baseweb="popover"] [role="option"]:hover,
-[data-baseweb="popover"] [aria-selected="true"] {{
-    background: #F3D7DE !important; color: {GUINDA} !important;
+
+div[data-baseweb="popover"] li,
+div[data-baseweb="popover"] [role="option"] {{
+    background: #FFFFFF !important;
+    color: {NAVY} !important;
+    -webkit-text-fill-color: {NAVY} !important;
+    border-radius: 6px !important;
+    padding: 6px 10px !important;
+    font-size: 13px !important;
+}}
+div[data-baseweb="popover"] li *,
+div[data-baseweb="popover"] [role="option"] * {{
+    color: {NAVY} !important;
+    -webkit-text-fill-color: {NAVY} !important;
+}}
+
+div[data-baseweb="popover"] li:hover,
+div[data-baseweb="popover"] [role="option"]:hover,
+div[data-baseweb="popover"] [aria-selected="true"] {{
+    background: #F3D7DE !important;
+}}
+div[data-baseweb="popover"] li:hover *,
+div[data-baseweb="popover"] [aria-selected="true"] * {{
+    color: {GUINDA} !important;
+    -webkit-text-fill-color: {GUINDA} !important;
+}}
+
+/* Casillas / checkboxes del multiselect */
+div[data-baseweb="popover"] svg {{
+    fill: {GUINDA} !important;
+    color: {GUINDA} !important;
+}}
+div[data-baseweb="popover"] svg[fill="none"],
+div[data-baseweb="popover"] svg path {{
+    stroke: {GUINDA} !important;
 }}
 
 /* ── Radio de navegación ── */
@@ -307,22 +344,35 @@ def ctl(b: pd.DataFrame, age: bool = True):
             m = st.sidebar.selectbox("Mes de corte", ms, index=len(ms) - 1,
                                      format_func=lambda x: f"{int(x):02d}")
 
+        # Entidad: selección única con opción "Todas"
     e = []
     if "ENT_CVE" in b.columns:
         cs = sorted(b.ENT_CVE.dropna().unique())
-        e = st.sidebar.multiselect("Entidad", cs, default=cs,
-                                   format_func=lambda x: names.get(x, x)) or cs
+        opts = ["__TODAS__"] + cs
+        sel = st.sidebar.selectbox(
+        "Entidad", opts,
+        format_func=lambda x: "Todas las entidades" if x == "__TODAS__" else names.get(x, x),
+        )
+        e = cs if sel == "__TODAS__" else [sel]
 
-    s = ["H", "M"]
-    if "SEXO" in b.columns:
-        s = st.sidebar.multiselect(
-            "Sexo", ["H", "M"], default=["H", "M"],
-            format_func=lambda x: {"H": "Hombres", "M": "Mujeres"}[x]) or ["H", "M"]
+
+    s = st.sidebar.pills(
+    "Sexo", ["H", "M"], selection_mode="multi", default=["H", "M"],
+    format_func=lambda x: {"H": "Hombres", "M": "Mujeres"}[x],
+    ) or ["H", "M"]
 
     a = []
     if age and "GRUPO_EDAD" in b.columns:
         aa = sorted(b.GRUPO_EDAD.dropna().unique())
-        a = st.sidebar.multiselect("Grupo de edad", aa, default=aa) or aa
+        opts = ["__TODOS__"] + list(aa)
+        sel = st.sidebar.selectbox(
+            "Grupo de edad",
+            opts,
+            format_func=lambda x: "Todos los grupos"
+                                  if x == "__TODOS__" else str(x),
+            key="filtro_grupo_edad",
+        )
+        a = aa if sel == "__TODOS__" else [sel]
 
     return y, m, e, s, a
 
