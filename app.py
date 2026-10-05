@@ -68,11 +68,52 @@ st.markdown(f"""
 [data-testid="stSidebar"] {{ background: linear-gradient(180deg, {GUINDA} 0%, {GUINDA_DARK} 100%); }}
 [data-testid="stSidebar"] * {{ color: #FFFFFF !important; }}
 [data-testid="stSidebar"] label {{ color: #F3D7DE !important; font-weight: 600 !important; font-size: 12.5px !important; }}
+
+/* ── Selectbox / Multiselect: fondo blanco, TEXTO OSCURO ── */
 [data-testid="stSidebar"] [data-baseweb="select"] > div,
 [data-testid="stSidebar"] [data-baseweb="input"] > div {{
-    background: rgba(255,255,255,0.10) !important;
-    border-color: rgba(255,255,255,0.25) !important;
+    background: #FFFFFF !important;
+    border-color: rgba(255,255,255,0.55) !important;
+    color: {NAVY} !important;
 }}
+[data-testid="stSidebar"] [data-baseweb="select"] *,
+[data-testid="stSidebar"] [data-baseweb="input"] *,
+[data-testid="stSidebar"] [data-baseweb="select"] input,
+[data-testid="stSidebar"] [data-baseweb="input"] input {{
+    color: {NAVY} !important;
+    -webkit-text-fill-color: {NAVY} !important;
+    opacity: 1 !important;
+}}
+[data-testid="stSidebar"] [data-baseweb="select"] svg,
+[data-testid="stSidebar"] [data-baseweb="input"] svg {{
+    fill: {GUINDA} !important;
+    color: {GUINDA} !important;
+}}
+/* Chips del multiselect */
+[data-testid="stSidebar"] [data-baseweb="tag"] {{
+    background: {GUINDA} !important;
+    color: #FFFFFF !important;
+}}
+[data-testid="stSidebar"] [data-baseweb="tag"] * {{ color: #FFFFFF !important; }}
+
+/* ── Dropdown desplegable (se renderiza en un portal fuera del sidebar) ── */
+[data-baseweb="popover"] [role="listbox"],
+[data-baseweb="popover"] ul {{
+    background: #FFFFFF !important;
+}}
+[data-baseweb="popover"] [role="option"],
+[data-baseweb="popover"] li {{
+    color: {NAVY} !important;
+    background: #FFFFFF !important;
+}}
+[data-baseweb="popover"] [role="option"]:hover,
+[data-baseweb="popover"] li:hover,
+[data-baseweb="popover"] [aria-selected="true"] {{
+    background: #F3D7DE !important;
+    color: {GUINDA} !important;
+}}
+
+/* ── Radio de navegación ── */
 [data-testid="stSidebar"] .stRadio > div {{ gap: 6px; }}
 [data-testid="stSidebar"] .stRadio label {{
     background: rgba(255,255,255,0.06);
