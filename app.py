@@ -65,49 +65,72 @@ st.markdown(f"""
 .stApp {{ background: {BG}; }}
 .block-container {{ padding-top: 0.8rem; padding-bottom: 2rem; max-width: 1500px; }}
 
-[data-testid="stSidebar"] {{ background: linear-gradient(180deg, {GUINDA} 0%, {GUINDA_DARK} 100%); }}
-[data-testid="stSidebar"] * {{ color: #FFFFFF !important; }}
-[data-testid="stSidebar"] label {{ color: #F3D7DE !important; font-weight: 600 !important; font-size: 12.5px !important; }}
+/* ── Sidebar: fondo ── */
+[data-testid="stSidebar"] {{
+    background: linear-gradient(180deg, {GUINDA} 0%, {GUINDA_DARK} 100%);
+}}
 
-/* ── Selectbox / Multiselect: fondo blanco, TEXTO OSCURO ── */
-[data-testid="stSidebar"] [data-baseweb="select"] > div,
-[data-testid="stSidebar"] [data-baseweb="input"] > div {{
+/* ── Texto general del sidebar (sin tocar widgets) ── */
+[data-testid="stSidebar"] > div > div > div p,
+[data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3, [data-testid="stSidebar"] h4,
+[data-testid="stSidebar"] .stMarkdown,
+[data-testid="stSidebar"] .stMarkdown * {{
+    color: #FFFFFF !important;
+}}
+
+/* ── Etiquetas de los widgets ── */
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] .stSelectbox label,
+[data-testid="stSidebar"] .stMultiSelect label {{
+    color: #F3D7DE !important;
+    font-weight: 600 !important;
+    font-size: 12.5px !important;
+}}
+
+/* ── Selectbox / Multiselect: fondo blanco y TEXTO VISIBLE ── */
+[data-testid="stSidebar"] div[data-baseweb="select"] > div:first-child {{
     background: #FFFFFF !important;
     border-color: rgba(255,255,255,0.55) !important;
-    color: {NAVY} !important;
 }}
-[data-testid="stSidebar"] [data-baseweb="select"] *,
-[data-testid="stSidebar"] [data-baseweb="input"] *,
-[data-testid="stSidebar"] [data-baseweb="select"] input,
-[data-testid="stSidebar"] [data-baseweb="input"] input {{
+/* El texto seleccionado (SingleValue / MultiValue) */
+[data-testid="stSidebar"] div[data-baseweb="select"] div[data-baseweb="select"] * ,
+[data-testid="stSidebar"] div[data-baseweb="select"] span,
+[data-testid="stSidebar"] div[data-baseweb="select"] input {{
     color: {NAVY} !important;
     -webkit-text-fill-color: {NAVY} !important;
     opacity: 1 !important;
 }}
-[data-testid="stSidebar"] [data-baseweb="select"] svg,
-[data-testid="stSidebar"] [data-baseweb="input"] svg {{
+/* El valor mostrado del select */
+[data-testid="stSidebar"] div[data-baseweb="select"] [data-testid="stSelectbox"] span,
+[data-testid="stSidebar"] div[data-baseweb="select"] div[title] {{
+    color: {NAVY} !important;
+    -webkit-text-fill-color: {NAVY} !important;
+}}
+/* Flechas SVG */
+[data-testid="stSidebar"] div[data-baseweb="select"] svg {{
     fill: {GUINDA} !important;
     color: {GUINDA} !important;
 }}
-/* Chips del multiselect */
-[data-testid="stSidebar"] [data-baseweb="tag"] {{
-    background: {GUINDA} !important;
-    color: #FFFFFF !important;
-}}
-[data-testid="stSidebar"] [data-baseweb="tag"] * {{ color: #FFFFFF !important; }}
 
-/* ── Dropdown desplegable (se renderiza en un portal fuera del sidebar) ── */
-[data-baseweb="popover"] [role="listbox"],
-[data-baseweb="popover"] ul {{
+/* ── Chips del multiselect (Entidad, Sexo, Grupo de edad) ── */
+[data-testid="stSidebar"] span[data-baseweb="tag"] {{
+    background: {GUINDA} !important;
+}}
+[data-testid="stSidebar"] span[data-baseweb="tag"] * {{
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+}}
+
+/* ── Dropdown desplegable (se renderiza en portal, fuera del sidebar) ── */
+[data-baseweb="popover"] [role="listbox"] {{
     background: #FFFFFF !important;
 }}
-[data-baseweb="popover"] [role="option"],
-[data-baseweb="popover"] li {{
+[data-baseweb="popover"] [role="option"] {{
     color: {NAVY} !important;
     background: #FFFFFF !important;
 }}
 [data-baseweb="popover"] [role="option"]:hover,
-[data-baseweb="popover"] li:hover,
 [data-baseweb="popover"] [aria-selected="true"] {{
     background: #F3D7DE !important;
     color: {GUINDA} !important;
@@ -120,6 +143,7 @@ st.markdown(f"""
     border-radius: 8px; padding: 7px 10px;
     transition: background .15s ease;
     font-weight: 500;
+    color: #FFFFFF !important;
 }}
 [data-testid="stSidebar"] .stRadio label:hover {{ background: rgba(255,255,255,0.18); }}
 
