@@ -1,0 +1,8 @@
+# Núcleo del tablero ISSSTE
+streamlit>=1.41.0
+pandas>=2.2.3
+openpyxl>=3.1.5
+plotly>=6.0.0
+
+# Dependencias transitivas (garantizan compatibilidad con Python 3.14)
+numpy>=2.1.0
