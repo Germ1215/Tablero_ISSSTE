@@ -31,7 +31,7 @@ import streamlit.components.v1 as components
 ANCHO_REF = 1536          # ancho (px CSS) donde el tablero se ve "como lo diseñé"
 K_MIN, K_MAX = 0.80, 2.50 # límites para que no se deforme en extremos
 _viewport = components.declare_component(
-    "viewport", path=str(Path(__file__).parent / "Componentes" / "viewport"))
+    "viewport", path=str(Path(__file__).parent / "componentes" / "viewport"))
 
 _vw = _viewport(key="vp", default=0)          # ancho real de la ventana del navegador
 if _vw:
