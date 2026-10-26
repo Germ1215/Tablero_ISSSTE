@@ -1002,7 +1002,7 @@ def page_issste():
                 xaxis_tick0=primer_corte,
                 xaxis_dtick="M12",
                 xaxis_tickformat="%Y",
-                yaxis_title="Personas / Plazas",
+                yaxis_title="Personas / Plazas (Millones)",
                 hovermode="x unified",
                 legend=dict(orientation="h", yanchor="bottom", y=-0.25,
                             xanchor="center", x=0.5, bgcolor="rgba(0,0,0,0)"),
@@ -1070,8 +1070,21 @@ def page_issste():
             ticks_eje = list(range(0, limite_ticks + 1, paso_eje))
             fig = px.bar(q, x="TOTAL", y="NOMBRAMIENO_DES", orientation="h",
                          title="Top 10 plazas por nombramiento")
-            fig.update_traces(marker_color=BLUE, texttemplate="%{x:,.0f}",
-                              textposition="outside")
+            
+            umbral = q["TOTAL"].max() * 0.10
+            posiciones = [
+                        "outside" if total <= umbral else "inside"
+                        for total in q["TOTAL"]
+                        ]
+            fig.update_traces(marker_color=BLUE, 
+                            texttemplate="%{x:,.0f}",
+                            textposition=posiciones,
+                            textfont_color=[
+                                        NAVY if posicion == "outside" else "white"
+                                        for posicion in posiciones
+                                        ],
+                            cliponaxis=False,)            
+  
             fig.update_layout(
                 yaxis_title="Tipos de Plazas",
                 xaxis_title="Trabajadores",
@@ -1105,10 +1118,14 @@ def page_trabajadores():
     with l:
         t = tr(b, e, s, a)
         if not t.empty:
+            t["TOTAL_MILLONES"] = t["TOTAL"] / 1_000_000
             primer_corte = t["Periodo"].min()
             ultimo_corte = t["Periodo"].max()
-            fig = px.line(t, x="Periodo", y="TOTAL", markers=True)
+            fig = px.line(t, x="Periodo", y="TOTAL", text="TOTAL_MILLONES")
             fig.update_traces(
+                mode="lines+markers+text",
+                texttemplate="%{text:.2f}",
+                textposition="top center",
                 line=dict(width=2.5, color=GUINDA),
                 hovertemplate="<b>Trabajadores</b><br>%{x|%b %Y}<br>"
                                               "%{y:,.0f}<extra></extra>"
@@ -1123,12 +1140,13 @@ def page_trabajadores():
                             xaxis_tick0=primer_corte,
                             xaxis_dtick="M12",
                             xaxis_tickformat="%Y",
-                            yaxis_title="Trabajadores",
+                            yaxis_title="Trabajadores (Millones)",
                             hovermode="x unified",
                             legend=dict(orientation="h", yanchor="bottom", y=-0.25,
                                         xanchor="center", x=0.5, bgcolor="rgba(0,0,0,0)"),
                         )
-            show(fig, 380)
+            show(fig, 380)  
+
     with r:
         fig = _mapa_tasa_sm(y, m, e, s)
         show(fig, 380)
@@ -1143,7 +1161,8 @@ def page_trabajadores():
             ag = (edades.groupby(["Edad_Agrup", "SEXO"], as_index=False)
                          .TOTAL.sum())
             ag = ag[ag["Edad_Agrup"].isin(_ORDEN_EDAD)]
-            fig = px.bar(ag, x="Edad_Agrup", y="TOTAL", color="SEXO",
+            fig = px.bar(ag, x="Edad_Agrup", y="TOTAL", 
+                         color="SEXO",
                          barmode="group",
                          title="Trabajadores por edad y sexo",
                          category_orders={
@@ -1153,12 +1172,32 @@ def page_trabajadores():
                          labels={"Edad_Agrup": "Grupo de edad",
                                  "TOTAL": "Trabajadores"},
                          color_discrete_map={"Hombre": NAVY, "Mujer": CORAL})
+            
+            umbral = ag["TOTAL"].max() * 0.05
+            for traza in fig.data:
+                posiciones = [
+                    "outside" if valor <= umbral else "inside"
+                    for valor in traza.y
+                ]
+
+                traza.texttemplate = "%{y:,.0f}"
+                traza.textposition = posiciones
+                traza.insidetextanchor = "end"
+                traza.textfont = dict(
+                    color=[
+                        NAVY if posicion == "outside" else "white"
+                        for posicion in posiciones
+                    ]
+                )
+                traza.cliponaxis = False            
+            
             fig.update_layout(
                 xaxis_title="Grupo de edad",
-                yaxis_title="Trabajadores",
+                yaxis_title="Trabajadores (Miles)",
                 margin=dict(t=S(90)),
                 legend=dict(title=dict(text="Sexo"),
-                            orientation="h", yanchor="bottom", y=1.02,
+                            orientation="h", 
+                            yanchor="bottom", y=1.02,
                             xanchor="center", x=0.5,
                             bgcolor="rgba(0,0,0,0)"),
             )
@@ -1170,8 +1209,21 @@ def page_trabajadores():
         if not q.empty:
             fig = px.bar(q, x="TOTAL", y="NOMBRAMIENO_DES", orientation="h",
                          title="Top 10 nombramientos")
-            fig.update_traces(marker_color=BLUE, texttemplate="%{x:,.0f}",
-                              textposition="outside")
+                        
+            umbral = q["TOTAL"].max() * 0.05
+            posiciones = [
+                "outside" if total <= umbral else "inside"
+                for total in q["TOTAL"]
+            ]
+            fig.update_traces(marker_color=BLUE, 
+                            texttemplate="%{x:,.0f}",
+                            textposition=posiciones,
+                            textfont_color=[
+                                NAVY if posicion == "outside" else "white"
+                                for posicion in posiciones
+                            ],
+                            cliponaxis=False,
+                              )
             fig.update_layout(
                             xaxis_title="Trabajadores",
                             yaxis_title="Tipos de plazas",
@@ -1184,8 +1236,9 @@ def page_trabajadores():
         if not z.empty:
             fig = px.bar(z, x="Promedio", y="NOMBRAMIENO_DES", orientation="h",
                          title="Remuneración promedio por nombramiento")
-            fig.update_traces(marker_color=TEAL, texttemplate="$%{x:,.0f}",
-                              textposition="outside")
+            fig.update_traces(marker_color=TEAL, 
+                              texttemplate="$%{x:,.0f}",
+                              textposition="inside")
             fig.update_layout(
                             xaxis_title="Promedio salario (MXN)",
                             yaxis_title="Tipos de plazas",
@@ -1237,12 +1290,19 @@ def page_plazas():
     with l:
         t = tr_plazas(b, e, s)
         if not t.empty:
-            fig = px.line(t, x="Periodo", y="TOTAL", markers=True,
+            t["TOTAL_MILLONES"] = t["TOTAL"] / 1_000_000
+            fig = px.line(t, x="Periodo", y="TOTAL", text="TOTAL_MILLONES",
                           title="Evolución del número de plazas")
-            fig.update_traces(line=dict(width=2.5, color=NAVY))
+            fig.update_traces(
+                mode="lines+markers+text",
+                texttemplate="%{text:.2f}",
+                textposition="top center",                
+                line=dict(width=2.5, color=NAVY),
+                hovertemplate="<b>Plazas</b><br>%{x|%b %Y}<br>"
+                                            "%{y:,.0f}<extra></extra>")
             fig.update_layout(
                             xaxis_title="Periodo",
-                            yaxis_title="Plazas",
+                            yaxis_title="Plazas (Millones)",
                                                 )
             show(fig, 380)
     with r:
@@ -1314,10 +1374,24 @@ def page_plazas():
                    .rename(columns={"_plazas": "TOTAL"})
                    .sort_values("TOTAL").tail(10))
             if not q.empty:
-                fig = px.bar(q, x="TOTAL", y="NOMBRAMIENO_DES", orientation="h",
+                fig = px.bar(q, x="TOTAL", y="NOMBRAMIENO_DES", 
+                             orientation="h",
                              title="Top 10 plazas por nombramiento")
-                fig.update_traces(marker_color=BLUE, texttemplate="%{x:,.0f}",
-                                  textposition="outside")
+                
+                umbral = q["TOTAL"].max() * 0.10
+                posiciones = [
+                            "outside" if total <= umbral else "inside"
+                            for total in q["TOTAL"]
+                            ]
+                            
+                fig.update_traces(marker_color=BLUE, 
+                                texttemplate="%{x:,.0f}",
+                                textposition=posiciones,
+                                textfont_color=[
+                                NAVY if posicion == "outside" else "white"
+                                for posicion in posiciones
+                                ],
+                                cliponaxis=False,)
                 fig.update_layout(
                                 yaxis_title="Tipos de plazas",
                                 xaxis_title="Plazas",
@@ -1378,7 +1452,7 @@ def page_pensionados():
                         yaxis_title="Pensionados y jubilados(miles)",
                         yaxis_tickmode="array",
                         yaxis_tickvals=tickvals,
-                        yaxis_ticktext=[str(v // 1000) for v in tickvals],  
+                        yaxis_ticktext=[f"{v // 1000:,}k" for v in tickvals],
             )
 
             show(fig, 380)
@@ -1408,8 +1482,28 @@ def page_pensionados():
             q["TIP_REG_PENS"] = q["TIP_REG_PENS"].replace({"DECIMO TRANSITORIO": "Transitorio", "CUENTA INDIVIDUAL": "Individual"})
             if not q.empty:
                 fig = px.bar(q, x="TOTAL", y="RECAT_PEN_ACT", color="TIP_REG_PENS",
-                             orientation="h", barmode="stack",
+                             orientation="h", barmode="group",
                              title="Régimen pensionario y tipo de pensión recibida")
+                
+                umbral = q["TOTAL"].max() * 0.1
+
+                for traza in fig.data:
+                    valores = traza.x
+                    posiciones = [
+                        "outside" if valor is not None and valor <= umbral else "inside"
+                        for valor in valores
+                    ]
+
+                    traza.texttemplate = "%{x:,.0f}"
+                    traza.textposition = posiciones
+                    traza.textfont = dict(
+                        color=[
+                            NAVY if posicion == "outside" else "white"
+                            for posicion in posiciones
+                        ]
+                    )
+                    traza.cliponaxis = False
+                
                 fig.update_layout(
                                 xaxis_title="Pensionados",
                                 yaxis_title="Tipo de pensión",
@@ -1426,8 +1520,23 @@ def page_pensionados():
         if not z.empty:
             fig = px.bar(z, x="Promedio", y="RANGO_TSERV", orientation="h",
                          title="Pensión promedio por años de servicio")
-            fig.update_traces(marker_color=TEAL, texttemplate="$%{x:,.0f}",
-                              textposition="outside")
+            
+            umbral = z["Promedio"].max() * 0.10
+            posiciones = [
+                        "outside" if total <= umbral else "inside"
+                        for total in z["Promedio"]
+                        ]
+                                        
+            fig.update_traces(marker_color=BLUE, 
+                            texttemplate="%{x:,.0f}",
+                            textposition=posiciones,
+                            textfont_color=[
+                                            NAVY if posicion == "outside" else "white"
+                                            for posicion in posiciones
+                                            ],
+                            cliponaxis=False,
+            )
+                                            
             fig.update_layout(
                             yaxis_title="Tiempo de servicio (años)",
                             xaxis_title="Pensión promedio (MXN)",
@@ -1442,7 +1551,25 @@ def page_pensionados():
             fig = px.bar(z, x="Promedio", y="RECAT_PEN_ACT", color="TIP_REG_PENS",
                          orientation="h", barmode="group",
                          title="Pensión promedio por régimen y tipo")
-            fig.update_traces(texttemplate="$%{x:,.0f}", textposition="inside")
+            
+            umbral = z["Promedio"].max() * 0.1
+            for traza in fig.data:
+                    valores = traza.x
+                    posiciones = [
+                        "outside" if valor is not None and valor <= umbral else "inside"
+                        for valor in valores
+                    ]
+
+                    traza.texttemplate = "%{x:,.0f}"
+                    traza.textposition = posiciones
+                    traza.textfont = dict(
+                        color=[
+                            NAVY if posicion == "outside" else "white"
+                            for posicion in posiciones
+                        ]
+                    )
+            traza.cliponaxis = False
+            
             fig.update_layout(
                                             xaxis_title="Promedio salario (MXN)",
                                             yaxis_title="Tipo de pensión",
@@ -1472,7 +1599,26 @@ def page_pensionados():
                                     "SEXO": ["Hombre", "Mujer"]},
                         labels={"Edad_Agrup": "Grupo de edad","TOTAL": "Pensionados"},
                         color_discrete_map={"Hombre": NAVY, "Mujer": CORAL})
-            fig.update_traces(texttemplate="%{x:,.0f}", textposition="outside")
+            
+            umbral = ag["TOTAL"].max() * 0.1
+
+            for traza in fig.data:
+                    valores = traza.x
+                    posiciones = [
+                        "outside" if valor is not None and valor <= umbral else "inside"
+                        for valor in valores
+                    ]
+
+                    traza.texttemplate = "%{x:,.0f}"
+                    traza.textposition = posiciones
+                    traza.textfont = dict(
+                        color=[
+                            NAVY if posicion == "outside" else "white"
+                            for posicion in posiciones
+                        ]
+                    )
+            traza.cliponaxis = False
+                    
             fig.update_layout(
                                     xaxis_title="Pensionados",
                                     yaxis_title="Grupo de edad",
@@ -1517,6 +1663,8 @@ def page_deudos():
             fig.update_traces(
                 mode="lines+markers+text",
                 line=dict(width=4, color=GUINDA, dash="dot"),
+                hovertemplate="<b>Deudos</b><br>%{x|%b %Y}<br>"
+                                "%{y:,.0f}<extra></extra>",
                 marker=dict(symbol="diamond"),
                 texttemplate="%{text:,.0f}",
                 textposition="top center",
@@ -1533,7 +1681,7 @@ def page_deudos():
                             xaxis_tickformat="%Y",
                             yaxis_tickmode="array",
                             yaxis_tickvals=tickvals,
-                            yaxis_ticktext=[str(v // 1000) for v in tickvals],
+                            yaxis_ticktext=[f"{v // 1000:,}k" for v in tickvals],
                                 )     
             show(fig, 380)
     with r:
@@ -1569,8 +1717,23 @@ def page_deudos():
                 fig = px.bar(ag, x="TOTAL", y="Edad_Agrup", 
                              orientation="h",barmode="stack",
                              title="Deudos por grupo de edad")
-                fig.update_traces(marker_color=BLUE, texttemplate="%{x:,.0f}",
-                                  textposition="outside")
+                   
+                umbral = ag["TOTAL"].max() * 0.10
+                posiciones = [
+                            "outside" if total <= umbral else "inside"
+                            for total in ag["TOTAL"]
+                        ]
+                                                        
+                fig.update_traces(marker_color=BLUE, 
+                            texttemplate="%{x:,.0f}",
+                            textposition=posiciones,
+                            textfont_color=[
+                                             NAVY if posicion == "outside" else "white"
+                                            for posicion in posiciones
+                                            ],
+                            cliponaxis=False,
+                            )
+                
                 fig.update_layout(
                         yaxis_title="Grupo de edad",
                         xaxis_title="Deudos (miles)",
@@ -1589,7 +1752,7 @@ def page_deudos():
                 limite = ((int(q["TOTAL"].max()) + paso - 1) // paso) * paso
                 tickvals = list(range(0, limite + paso, paso))
                 fig = px.bar(q, x="TOTAL", y="RECAT_TBN", color="RECAT_DEUDO",
-                             orientation="h", barmode="stack",
+                             orientation="h", barmode="group",
                              title="Deudos por tipo de pensión")
                 fig.update_layout(
                             xaxis_title="Deudos (miles)",
@@ -1613,8 +1776,23 @@ def page_deudos():
             tickvals = list(range(0, ((int(z["Promedio"].max()) + 1999) // 2000) * 2000 + 1,2000,))
             fig = px.bar(z, x="Promedio", y="RECAT_DEUDO", orientation="h",
                          title="Monto promedio por tipo de deudo")
-            fig.update_traces(marker_color=TEAL, texttemplate="$%{x:,.0f}",
-                              textposition="outside")
+            
+            umbral = z["Promedio"].max() * 0.10
+            posiciones = [
+                        "outside" if total <= umbral else "inside"
+                        for total in z["Promedio"]
+                         ]
+                                                                    
+            fig.update_traces(marker_color=TEAL, 
+                            texttemplate="%{x:,.0f}",
+                            textposition=posiciones,
+                            textfont_color=[
+                                            NAVY if posicion == "outside" else "white"
+                                            for posicion in posiciones
+                                            ],
+                            cliponaxis=False,
+                            )
+                            
             fig.update_layout(
                             yaxis_title="Tipos de deudos",
                             xaxis_title="Monto promedio (miles MXN)",
@@ -1629,7 +1807,23 @@ def page_deudos():
             tickvals = list(range(0, ((int(z["Promedio"].max()) + 1999) // 2000) * 2000 + 1, 2000,))
             fig = px.bar(z, x="Promedio", y="RECAT_TBN", orientation="h",
                          title="Monto promedio por tipo de pensión")
-            fig.update_traces(marker_color=AMBER, texttemplate="$%{x:,.0f}",textposition="outside")
+            
+            umbral = z["Promedio"].max() * 0.10
+            posiciones = [
+                        "outside" if total <= umbral else "inside"
+                        for total in z["Promedio"]
+                        ]
+                                                                    
+            fig.update_traces(marker_color=AMBER, 
+                            texttemplate="%{x:,.0f}",
+                            textposition=posiciones,
+                            textfont_color=[
+                                            NAVY if posicion == "outside" else "white"
+                                            for posicion in posiciones
+                                            ],
+                            cliponaxis=False,
+                            )
+                            
             fig.update_layout(
                             yaxis_title="Tipos de pensiones",
                             xaxis_title="Monto promedio (miles MXN)",
@@ -1658,11 +1852,18 @@ def page_familiares():
     with l:
         t = tr(b, e, s, a)
         if not t.empty:
-            fig = px.line(t, x="Periodo", y="TOTAL", markers=True,
+            t["TOTAL_MILLONES"] = t["TOTAL"] / 1_000_000
+            fig = px.line(t, x="Periodo", y="TOTAL", text="TOTAL_MILLONES",
                           title="Evolución de familiares derechohabientes",)
-            fig.update_traces(line=dict(width=2.5, color=GUINDA))
-            fig.update_xaxes(title_text="Periodo (Trimestral)")
-            fig.update_yaxes(title_text="Familiares derechohabientes")
+            fig.update_traces(
+                mode="lines+markers+text",  
+                texttemplate="%{text:.2f}",
+                textposition="top center",                
+                line=dict(width=2.5, color=GUINDA),
+                hovertemplate="<b>Familiares</b><br>%{x|%b %Y}<br>"
+                                            "%{y:,.0f}<extra></extra>")
+            fig.update_xaxes(title_text="Periodo")
+            fig.update_yaxes(title_text="Familiares (Millones)")
             show(fig, 380)
     with r:
         q = x.groupby("SEXO", as_index=False).TOTAL.sum()
@@ -1695,7 +1896,26 @@ def page_familiares():
                              orientation="h", barmode="group",
                              title="Total de familiares derechohabientes por parentesco y sexo",
                              color_discrete_map={"Hombre": NAVY, "Mujer": CORAL})
-                fig.update_traces(texttemplate="%{x:,.0f}", textposition="outside")
+                
+                umbral = q["TOTAL"].max() * 0.1
+                
+                for traza in fig.data:
+                                    valores = traza.x
+                                    posiciones = [
+                                        "outside" if valor is not None and valor <= umbral else "inside"
+                                        for valor in valores
+                                    ]
+                
+                                    traza.texttemplate = "%{x:,.0f}"
+                                    traza.textposition = posiciones
+                                    traza.textfont = dict(
+                                        color=[
+                                            NAVY if posicion == "outside" else "white"
+                                            for posicion in posiciones
+                                        ]
+                                    )
+                traza.cliponaxis = False
+                            
                 fig.update_layout(
                                 yaxis_title="Parentesco",
                                 xaxis_title="Familiares derechohabientes",
