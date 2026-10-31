@@ -719,18 +719,18 @@ def exportar(x, nombre):
 # MAPA COROPLÉTICO DE TASA (SM)
 # ═════════════════════════════════════════════════════════════════════════
 def _mapa_tasa_sm(y, m, e, s, selected_rango=None):
-    sm = D["ISSSTE_TRAB_SM"]
+    sm = D["ISSSTE_TRAB_TOT2015_2025"]
     x = fil(sm, y, m, e, s)
 
     if x.empty:
         return px.scatter(title="Sin datos de salario mínimo para el periodo seleccionado")
-    if "Tasa" not in x.columns or "TOTAL" not in x.columns:
-        return px.scatter(title="Faltan columnas 'Tasa' o 'TOTAL' en ISSSTE_TRAB_SM")
+    if "TASA" not in x.columns or "TOTAL" not in x.columns:
+        return px.scatter(title="Faltan columnas 'TASA' o 'TOTAL' en ISSSTE_TRAB_TOT2015_2025")
 
-    g = (x.assign(w=x.TOTAL * x.Tasa)
+    g = (x.assign(w=x.TOTAL * x.TASA)
            .groupby("ENT_CVE", as_index=False)
            .agg(w=("w", "sum"), TOTAL=("TOTAL", "sum"))
-           .assign(Tasa=lambda q: q.w / q.TOTAL))
+           .assign(TASA=lambda q: q.w / q.TOTAL))
 
     gj, feat_key, pad = _load_geojson_meta()
 
@@ -748,7 +748,7 @@ def _mapa_tasa_sm(y, m, e, s, selected_rango=None):
                .dropna(subset=["Latitud"]))
         f = px.scatter_geo(
             q, lat="Latitud", lon="Longitud", size="TOTAL",
-            color="Tasa", hover_name="Entidad",
+            color="TASA", hover_name="Entidad",
             color_continuous_scale=AZUL_ROJO,
             title="Tasa de distribución por entidad federativa",
         )
@@ -920,31 +920,29 @@ def page_issste():
     # ── KPIs ─────────────────────────────────────────────────────────────
     tot_trab, y_trab = tot_o_ultimo(b, y, m, e, s, a)
 
-    # Plazas: usar ISSSTE_PLAZ_NOMBRA_PROM multiplicando por el rango
-    _serie_plaz = tr_plazas(D["ISSSTE_PLAZ_NOMBRA_PROM"], e, s)
-    if not _serie_plaz.empty and y is not None:
-        _p = _serie_plaz[_serie_plaz.Periodo.dt.year == y]
-        if not _p.empty:
-            tot_plaz = _p.TOTAL.sum()
-            y_plaz   = y
-        else:
-            tot_plaz = _serie_plaz.TOTAL.iloc[-1]
-            y_plaz   = int(_serie_plaz.Periodo.dt.year.max())
-    else:
-        tot_plaz, y_plaz = 0, y
-
+    # Plazas: sumar TOTAL directamente desde ISSSTE_PLAZ_NOMBRA_PROM.
+    tot_plaz, y_plaz = tot_o_ultimo(
+        D["ISSSTE_PLAZ_NOMBRA_PROM"], y, m, e, s
+    )
     tot_pen, y_pen = tot_o_ultimo(D["ISSSTE_PENS_REGPEN"],  y, m, e, s, a)
     tot_deu, y_deu = tot_o_ultimo(D["ISSSTE_DEUD_TOT"],      y, m, e, s, a)
     tot_fam, y_fam = tot_o_ultimo(D["ISSSTE_FAMILIAR_PARENT"], y, m, e, s, a)
 
     c1, c2, c3, c4, c5 = st.columns(5,gap="small")
     kpi(c1, "Trabajadores", fmt(tot_trab), delta_aoa(b, y, m, e, s, a))
+    
     kpi(c2, "Plazas",       fmt(tot_plaz),
-        note=(f"año {y_plaz}" if y_plaz != y else None))
+        note=(
+            f"Selección: {y} · dato disponible: {y_plaz}"
+            if y_plaz != y else f"Año {y_plaz}"
+        ))
+    
     kpi(c3, "Pensionados",  fmt(tot_pen),
         note=(f"año {y_pen}" if y_pen != y else None))
+    
     kpi(c4, "Deudos",       fmt(tot_deu),
         note=(f"año {y_deu}" if y_deu != y else None))
+    
     kpi(c5, "Familiares",   fmt(tot_fam),
         note=(f"año {y_fam}" if y_fam != y else None))
 
@@ -1161,7 +1159,7 @@ def page_trabajadores():
             ag = (edades.groupby(["Edad_Agrup", "SEXO"], as_index=False)
                          .TOTAL.sum())
             ag = ag[ag["Edad_Agrup"].isin(_ORDEN_EDAD)]
-            fig = px.bar(ag, x="Edad_Agrup", y="TOTAL", 
+            fig = px.bar(ag, x="TOTAL", y="Edad_Agrup", 
                          color="SEXO",
                          barmode="group",
                          title="Trabajadores por edad y sexo",
@@ -1173,14 +1171,14 @@ def page_trabajadores():
                                  "TOTAL": "Trabajadores"},
                          color_discrete_map={"Hombre": NAVY, "Mujer": CORAL})
             
-            umbral = ag["TOTAL"].max() * 0.05
+            umbral = ag["TOTAL"].max() * 0.1
             for traza in fig.data:
                 posiciones = [
                     "outside" if valor <= umbral else "inside"
-                    for valor in traza.y
+                    for valor in traza.x
                 ]
 
-                traza.texttemplate = "%{y:,.0f}"
+                traza.texttemplate = "%{x:,.0f}"
                 traza.textposition = posiciones
                 traza.insidetextanchor = "end"
                 traza.textfont = dict(
@@ -1192,8 +1190,8 @@ def page_trabajadores():
                 traza.cliponaxis = False            
             
             fig.update_layout(
-                xaxis_title="Grupo de edad",
-                yaxis_title="Trabajadores (Miles)",
+                yaxis_title="Grupo de edad",
+                xaxis_title="Trabajadores (Miles)",
                 margin=dict(t=S(90)),
                 legend=dict(title=dict(text="Sexo"),
                             orientation="h", 
@@ -1262,16 +1260,17 @@ def page_trabajadores():
 
 
 def page_plazas():
-    b = D["ISSSTE_PLAZ_NOMBRA_PROM"]
+    b = D["ISSSTE_TRAB_NPLAZAS"]
     y, m, e, s, _ = ctl(b, age=False)
     x = fil(b, y, m, e, s)
+    xx=fil(D["ISSSTE_PLAZ_NOMBRA_PROM"], y, m, e, s)
     col, factor = _col_plazas(x)
 
     head("Plazas de trabajadores afiliados al ISSSTE",
          f"Corte {int(m):02d}/{y}" if m else f"Año {y}")
 
     if col is None:
-        st.warning("La hoja ISSSTE_PLAZ_NOMBRA_PROM no contiene columnas "
+        st.warning("La hoja ISSSTE_TRAB_NPLAZAS no contiene columnas "
                    "para calcular plazas (RANGO_PLAZAS + TOTAL).")
         return
 
@@ -1279,12 +1278,17 @@ def page_plazas():
     x["_plazas"] = _plazas_de(x, col, factor)
     total_plazas = x["_plazas"].sum()
 
-    c1, c2, c3 = st.columns(3)
-    kpi(c1, "Total plazas", fmt(total_plazas))
-    kpi(c2, "Nombramientos",
-        fmt(x.NOMBRAMIENO_DES.nunique()) if "NOMBRAMIENO_DES" in x else "—")
-    kpi(c3, "Entidades", fmt(len(e)))
+    c1, c2, c3, c4 , c5 = st.columns(5)
+    kpi(c1, "Total trabajadores", fmt(total_plazas))
+    kpi(c2, "Total plazas", fmt(xx.TOTAL.sum()) if "TOTAL" in xx else "—")
+    
+    p = wavg(xx, "PROM_REMUNERACN")
+    kpi(c3, "Salario promedio", money(p) if p else "—")
+        
+    kpi(c4, "Nombramientos",fmt(x.NOMBRAMIENO_DES.nunique()) if "NOMBRAMIENO_DES" in x else "—")    
+    kpi(c5, "Ramos",fmt(xx.RAMO.nunique()) if "RAMO" in xx else "—")
 
+# ── Gráfico de línea de evolución de plazas ─────────────────────────────────
     st.markdown("")
     l, r = st.columns([3, 2])
     with l:
@@ -1305,74 +1309,94 @@ def page_plazas():
                             yaxis_title="Plazas (Millones)",
                                                 )
             show(fig, 380)
+            
+# ── Gráfico de barras de plazas por ramos─────────────────────────
     with r:
-        if "ENT_CVE" in x.columns:
-            q = (x.groupby("ENT_CVE", as_index=False)["TOTAL"].sum()
-                   .dropna(subset=["ENT_CVE"]))
-            gj, feature_key, pad = _load_geojson_meta()
-            q["ENT_CVE"] = q["ENT_CVE"].apply(
-                lambda code: _normalizar_codigo(code, pad)
-            )
-            q["Entidad"] = q["ENT_CVE"].map(
-                lambda code: names.get(
-                    int(code) if code and code.isdigit() else code,
-                    names.get(code, code),
-                )
-            )
-
-            if gj is not None and feature_key is not None:
-                fig = px.choropleth(
-                    q, geojson=gj, locations="ENT_CVE",
-                    featureidkey=feature_key, color="TOTAL",
-                    color_continuous_scale=["#D9E6F5", NAVY],
-                    hover_name="Entidad",
-                    hover_data={"TOTAL": ":,.0f", "ENT_CVE": False,
-                                "Entidad": False},
-                    labels={"TOTAL": "Plazas"},
-                    title="Distribución de plazas por entidad federativa",
-                )
-                fig.update_geos(fitbounds="locations", visible=False,
-                                bgcolor="white")
+        ramo = fil(D["ISSSTE_PLAZ_NOMBRA_PROM"], y, m, e, s)
+        
+        if {"RAMO", "TOTAL"}.issubset(ramo.columns):
+            q = (ramo.groupby(
+                            "RAMO", as_index=False
+                         )["TOTAL"].sum()
+                           .sort_values("TOTAL").tail(10))
+                    
+            if not q.empty:
+                
+                fig = px.bar(q, x="TOTAL", y="RAMO",
+                                     orientation="h",
+                                     title="Top 10 plazas por ramo")
+                        
+                umbral = q["TOTAL"].max() * 0.10
+                posiciones = [
+                                    "outside" if total <= umbral else "inside"
+                                    for total in q["TOTAL"]
+                                    ]
+                                    
+                fig.update_traces(marker_color=TEAL, 
+                                        texttemplate="%{x:,.0f}",
+                                        textposition=posiciones,
+                                        textfont_color=[
+                                        NAVY if posicion == "outside" else "white"
+                                        for posicion in posiciones
+                                        ],
+                                        cliponaxis=False,)
                 fig.update_layout(
-                    coloraxis_colorbar=dict(title="Plazas", thickness=12,
-                                            len=0.7),
-                    margin=dict(t=S(20)),
-                )
-            else:
-                coordenadas = geo[["cve_issste", "Latitud", "Longitud"]]
-                q = q.merge(coordenadas, left_on="ENT_CVE",
-                            right_on="cve_issste", how="left")
-                q = q.dropna(subset=["Latitud"])
-                fig = px.scatter_geo(
-                    q, lat="Latitud", lon="Longitud", size="TOTAL",
-                    hover_name="Entidad", color="TOTAL",
-                    color_continuous_scale=["#D9E6F5", NAVY],
-                    title="Distribución de plazas por entidad federativa",
-                )
-                fig.update_geos(lataxis_range=[14, 33], lonaxis_range=[-118, -86],
-                                showland=True, landcolor="#F1F3F6",
-                                showocean=True, oceancolor="#DCEAF5",
-                                showcountries=True, countrycolor="#C7CCD3",
-                                showcoastlines=True, coastlinecolor="#B8BEC5")
-                fig.update_layout(coloraxis_showscale=False,
-                                  margin=dict(t=S(20)))
+                                        yaxis_title="Tipos de ramos",
+                                        xaxis_title="Plazas",
+                                                            )
             show(fig, 380)
-
+            
+# Gráfico de de pastel sobre proporción por número de plazas
     l, r = st.columns(2)
     with l:
         if "RANGO_PLAZAS" in x.columns:
             q = (x.groupby("RANGO_PLAZAS", as_index=False)["_plazas"].sum()
                    .rename(columns={"_plazas": "TOTAL"}))
             if not q.empty:
+                total = q["TOTAL"].sum()
+                es_tres_o_mas = (
+                    q["RANGO_PLAZAS"].astype("string").str.strip().str.casefold()
+                    .isin({"3 o más plazas", "3 o mas plazas"})
+                )
+                etiquetas = [
+                    f"{valor / total:.2%}<br>{valor:,.0f}" if total
+                    else f"{valor:,.0f}"
+                    for valor in q["TOTAL"]
+                ]
                 fig = px.pie(q, names="RANGO_PLAZAS", values="TOTAL", hole=0.4,
                              title="Proporción según número de plazas")
-                fig.update_traces(textposition="outside", textinfo="percent")
-                show(fig, 420)
+                fig.update_traces(
+                    text=etiquetas,
+                    textposition=[
+                        "outside" if es_exterior else "inside"
+                        for es_exterior in es_tres_o_mas
+                    ],
+                    texttemplate="%{text}",
+                )
+                fig.update_layout(
+                    margin=dict(t=S(90), b=S(90)),
+                    legend=dict(
+                        title=dict(text="Número de plazas"),
+                        orientation="h",
+                        yanchor="top", y=-0.2,
+                        xanchor="center", x=0.5,
+                        bgcolor="rgba(0,0,0,0)",
+                    ),
+                )
+                
+                show(fig, 420)       
+
+# ── Gráfico de barras de plazas nombramiento─────────────────────────
     with r:
-        if "NOMBRAMIENO_DES" in x.columns:
-            q = (x.groupby("NOMBRAMIENO_DES", as_index=False)["_plazas"].sum()
-                   .rename(columns={"_plazas": "TOTAL"})
+        nombramientos = fil(
+            D["ISSSTE_PLAZ_NOMBRA_PROM"], y, m, e, s
+        )
+        if {"NOMBRAMIENO_DES", "TOTAL"}.issubset(nombramientos.columns):
+            q = (nombramientos.groupby(
+                    "NOMBRAMIENO_DES", as_index=False
+                 )["TOTAL"].sum()
                    .sort_values("TOTAL").tail(10))
+            
             if not q.empty:
                 fig = px.bar(q, x="TOTAL", y="NOMBRAMIENO_DES", 
                              orientation="h",
@@ -1460,6 +1484,7 @@ def page_pensionados():
     with r:
         q = x.groupby("SEXO", as_index=False).TOTAL.sum()
         if not q.empty:
+            
             q["SEXO"] = q["SEXO"].replace({"H": "Hombre", "M": "Mujer"})
             fig = px.pie(q, names="SEXO", values="TOTAL", hole=0.4,
                          title="Distribución por sexo", color="SEXO",
@@ -1473,6 +1498,7 @@ def page_pensionados():
                     orientation="h", yanchor="bottom", y=1.02,
                     xanchor="center", x=0.5,
                     bgcolor="rgba(0,0,0,0)"))
+            
             show(fig, 380)
 
     l, r = st.columns(2)
